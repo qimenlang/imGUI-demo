@@ -17,5 +17,14 @@ struct PixelInputType
 ////////////////////////////////////////////////////////////////////////////////
 float4 ColorPixelShader(PixelInputType input) : SV_TARGET
 {
-    return input.color;
+    float depth;
+    float4 color;
+    depth=input.position.z/input.position.w;
+
+    color.x=depth;
+    color.y=depth;
+    color.z=depth;
+    color.w=1.0f;
+
+    return color;
 }
