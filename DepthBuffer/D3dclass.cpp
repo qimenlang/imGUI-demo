@@ -1,4 +1,4 @@
-////////////////////////////////////////////////////////////////////////////////
+﻿////////////////////////////////////////////////////////////////////////////////
 // Filename: d3dclass.cpp
 ////////////////////////////////////////////////////////////////////////////////
 #include "d3dclass.h"
@@ -196,6 +196,9 @@ bool D3DClass::Initialize(int screenWidth, int screenHeight, bool vsync, HWND hw
 	// Set the feature level to DirectX 11.
 	featureLevel = D3D_FEATURE_LEVEL_11_0;
 
+	//交换链为双缓冲区服务
+	//ID3D11Device和ID3D11DeviceContext是所有Direct3D函数的接口
+	//如果显卡不支持DX11,创建会失败
 	// Create the swap chain, Direct3D device, and Direct3D device context.
 	result = D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, 0, &featureLevel, 1,
 		D3D11_SDK_VERSION, &swapChainDesc, &m_swapChain, &m_device, NULL, &m_deviceContext);
@@ -211,6 +214,7 @@ bool D3DClass::Initialize(int screenWidth, int screenHeight, bool vsync, HWND hw
 		return false;
 	}
 
+	//将交换链的后台缓冲指针绑定到ID3D11RenderTargetView
 	// Create the render target view with the back buffer pointer.
 	result = m_device->CreateRenderTargetView(backBufferPtr, NULL, &m_renderTargetView);
 	if (FAILED(result))
@@ -238,6 +242,7 @@ bool D3DClass::Initialize(int screenWidth, int screenHeight, bool vsync, HWND hw
 	depthBufferDesc.CPUAccessFlags = 0;
 	depthBufferDesc.MiscFlags = 0;
 
+	//使用CreateTexture2D函数创建缓冲区，该缓冲区可以被绘制到屏幕
 	// Create the texture for the depth buffer using the filled out description.
 	result = m_device->CreateTexture2D(&depthBufferDesc, NULL, &m_depthStencilBuffer);
 	if (FAILED(result))
@@ -247,7 +252,7 @@ bool D3DClass::Initialize(int screenWidth, int screenHeight, bool vsync, HWND hw
 
 	// Initialize the description of the stencil state.
 	ZeroMemory(&depthStencilDesc, sizeof(depthStencilDesc));
-
+	//depthStencilDesc包含D3D的深度测试配置
 	// Set up the description of the stencil state.
 	depthStencilDesc.DepthEnable = true;
 	depthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
@@ -276,6 +281,7 @@ bool D3DClass::Initialize(int screenWidth, int screenHeight, bool vsync, HWND hw
 		return false;
 	}
 
+	//使用设备上下文对象设置深度模板状态;
 	// Set the depth stencil state.
 	m_deviceContext->OMSetDepthStencilState(m_depthStencilState, 1);
 
@@ -287,7 +293,7 @@ bool D3DClass::Initialize(int screenWidth, int screenHeight, bool vsync, HWND hw
 	depthStencilViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
 	depthStencilViewDesc.Texture2D.MipSlice = 0;
 
-	// Create the depth stencil view.
+	// Create the depth stencil view.并且绑定深度缓冲区到深度缓冲视图
 	result = m_device->CreateDepthStencilView(m_depthStencilBuffer, &depthStencilViewDesc, &m_depthStencilView);
 	if (FAILED(result))
 	{
@@ -295,8 +301,10 @@ bool D3DClass::Initialize(int screenWidth, int screenHeight, bool vsync, HWND hw
 	}
 
 	// Bind the render target view and depth stencil buffer to the output render pipeline.
+	//将渲染目标视图和深度模板视图绑定到输出渲染管道
 	m_deviceContext->OMSetRenderTargets(1, &m_renderTargetView, m_depthStencilView);
 
+	//设置光栅化状态，控制多边形绘制的方式
 	// Setup the raster description which will determine how and what polygons will be drawn.
 	rasterDesc.AntialiasedLineEnable = false;
 	rasterDesc.CullMode = D3D11_CULL_BACK;
@@ -335,11 +343,15 @@ bool D3DClass::Initialize(int screenWidth, int screenHeight, bool vsync, HWND hw
 	screenAspect = (float)screenWidth / (float)screenHeight;
 
 	// Create the projection matrix for 3D rendering.
+	//投影矩阵P用于将3D场景转换到2D视口空间
 	D3DXMatrixPerspectiveFovLH(&m_projectionMatrix, fieldOfView, screenAspect, screenNear, screenDepth);
 
 	// Initialize the world matrix to the identity matrix.
+	//世界矩阵（模型矩阵M）用于将模型空间的顶点转换到世界空间
 	D3DXMatrixIdentity(&m_worldMatrix);
 
+	// 视口矩阵V 用于将世界坐标系下的顶点转换到相机坐标系，在相机中创建
+	// 正交投影矩阵，用于渲染屏幕上的2D用户界面
 	// Create an orthographic projection matrix for 2D rendering.
 	D3DXMatrixOrthoLH(&m_orthoMatrix, (float)screenWidth, (float)screenHeight, screenNear, screenDepth);
 
@@ -405,6 +417,7 @@ void D3DClass::Shutdown()
 	return;
 }
 
+//BeginScene函数用于在渲染每一帧之前，将后台缓冲和深度缓冲清空
 void D3DClass::BeginScene(float red, float green, float blue, float alpha)
 {
 	float color[4];
@@ -425,7 +438,7 @@ void D3DClass::BeginScene(float red, float green, float blue, float alpha)
 	return;
 }
 
-
+//EndScene用于在渲染完一帧之后，交换链将其显示出来
 void D3DClass::EndScene()
 {
 	// Present the back buffer to the screen since rendering is complete.

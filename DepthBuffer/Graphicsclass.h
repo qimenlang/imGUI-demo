@@ -39,6 +39,5 @@ private:
 	D3DClass* m_D3D;
 	CameraClass* m_Camera;
 	ModelClass* m_Model;
-	ColorShaderClass* m_ColorShader;
-	DepthShaderClass* m_DepthShader;
+	IShader* m_Shader;
 };
